@@ -25,16 +25,16 @@ public class VertexAiGeminiChatClientConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(VertexAiGeminiChatClientConfig.class);
     
-    @Value("${spring.ai.vertex.ai.gemini.projectId:***REMOVED***}")
+    @Value("${spring.ai.vertex.ai.gemini.projectId:}")
     private String projectId;
     
     @Value("${spring.ai.vertex.ai.gemini.location:us-central1}")
     private String location;
     
-    @Value("${spring.ai.vertex.ai.gemini.apiKey:***REMOVED***}")
+    @Value("${spring.ai.vertex.ai.gemini.apiKey:}")
     private String apiKey;
     
-    @Value("${spring.ai.vertex.ai.gemini.chat.options.model:***REMOVED***}")
+    @Value("${spring.ai.vertex.ai.gemini.chat.options.model:gemini-pro}")
     private String modelName;
     
     @Value("${spring.ai.vertex.ai.gemini.chat.options.maxTokens:8192}")
