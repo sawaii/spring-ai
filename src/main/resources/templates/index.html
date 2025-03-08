@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring AI Mobile Automation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+        }
+        .card {
+            margin-bottom: 1.5rem;
+        }
+        .badge {
+            font-size: 0.8rem;
+        }
+        .screenshot-thumbnail {
+            max-width: 200px;
+            cursor: pointer;
+        }
+        .modal-img {
+            max-width: 100%;
+        }
+        .top-spacing {
+            margin-top: 1.5rem;
+        }
+        .action-successful {
+            background-color: #e8f5e9;
+        }
+        .action-failed {
+            background-color: #ffebee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col">
+                <h1>Spring AI Mobile Automation</h1>
+                <p class="lead">Intelligent automated testing for Android applications</p>
+            </div>
+        </div>
+
+        <!-- New Instruction Form -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>New Test Instruction</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="instructionForm" th:action="@{/api/test/instructions}" method="post">
+                            <div class="mb-3">
+                                <label for="instruction" class="form-label">Enter your test instruction in natural language</label>
+                                <textarea class="form-control" id="instruction" name="instruction" rows="3" placeholder="Example: Login with username 'testuser' and password 'password123'"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Submit Instruction</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions List -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5>Recent Instructions</h5>
+                        <button id="refreshInstructions" class="btn btn-sm btn-outline-secondary">Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="instructionsList">
+                            <!-- Instructions will be loaded here -->
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instruction Details -->
+        <div class="row mb-4" id="instructionDetailSection" style="display: none;">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Instruction Details</h5>
+                    </div>
+                    <div class="card-body" id="instructionDetail">
+                        <!-- Instruction details will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screenshot Modal -->
+    <div class="modal fade" id="screenshotModal" tabindex="-1" aria-labelledby="screenshotModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="screenshotModalLabel">Screenshot</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img src="" id="modalImage" class="modal-img" alt="Screenshot">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load instructions when page loads
+            loadInstructions();
+            
+            // Refresh instructions button
+            document.getElementById('refreshInstructions').addEventListener('click', loadInstructions);
+            
+            // Handle instruction form submission
+            document.getElementById('instructionForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const instruction = document.getElementById('instruction').value;
+                
+                if (!instruction) {
+                    alert('Please enter an instruction');
+                    return;
+                }
+                
+                fetch('/api/test/instructions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ instruction: instruction })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('instruction').value = '';
+                    loadInstructions();
+                    executeInstruction(data.id);
+                })
+                .catch(error => {
+                    console.error('Error submitting instruction:', error);
+                    alert('Error submitting instruction');
+                });
+            });
+        });
+        
+        function loadInstructions() {
+            fetch('/api/test/instructions')
+                .then(response => response.json())
+                .then(data => {
+                    const instructionsList = document.getElementById('instructionsList');
+                    
+                    if (data.length === 0) {
+                        instructionsList.innerHTML = '<div class="alert alert-info">No instructions found</div>';
+                        return;
+                    }
+                    
+                    let html = '<div class="list-group">';
+                    
+                    data.forEach(instruction => {
+                        let statusClass = '';
+                        let statusBadge = '';
+                        
+                        switch(instruction.status) {
+                            case 'PENDING':
+                                statusBadge = '<span class="badge bg-secondary">Pending</span>';
+                                break;
+                            case 'IN_PROGRESS':
+                                statusBadge = '<span class="badge bg-primary">In Progress</span>';
+                                break;
+                            case 'COMPLETED':
+                                statusBadge = '<span class="badge bg-success">Completed</span>';
+                                break;
+                            case 'FAILED':
+                                statusBadge = '<span class="badge bg-danger">Failed</span>';
+                                break;
+                        }
+                        
+                        html += `
+                            <a href="#" class="list-group-item list-group-item-action" onclick="loadInstructionDetail(${instruction.id}); return false;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">${instruction.text}</h5>
+                                    ${statusBadge}
+                                </div>
+                                <small class="text-muted">Created: ${new Date(instruction.createdAt).toLocaleString()}</small>
+                            </a>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    instructionsList.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error loading instructions:', error);
+                    document.getElementById('instructionsList').innerHTML = 
+                        '<div class="alert alert-danger">Error loading instructions</div>';
+                });
+        }
+        
+        function loadInstructionDetail(id) {
+            // Show the detail section
+            document.getElementById('instructionDetailSection').style.display = 'block';
+            
+            // Load instruction details
+            fetch(`/api/test/instructions/${id}`)
+                .then(response => response.json())
+                .then(instruction => {
+                    // Load actions for this instruction
+                    fetch(`/api/test/instructions/${id}/actions`)
+                        .then(response => response.json())
+                        .then(actions => {
+                            const detailHtml = createInstructionDetailHtml(instruction, actions);
+                            document.getElementById('instructionDetail').innerHTML = detailHtml;
+                            
+                            // Initialize popovers and modals
+                            const modal = new bootstrap.Modal(document.getElementById('screenshotModal'));
+                            
+                            // Add event listeners for screenshot thumbnails
+                            document.querySelectorAll('.screenshot-thumbnail').forEach(img => {
+                                img.addEventListener('click', function() {
+                                    document.getElementById('modalImage').src = this.src;
+                                    document.getElementById('screenshotModalLabel').textContent = this.alt;
+                                    modal.show();
+                                });
+                            });
+                        })
+                        .catch(error => {
+                            console.error('Error loading actions:', error);
+                            document.getElementById('instructionDetail').innerHTML = 
+                                '<div class="alert alert-danger">Error loading action details</div>';
+                        });
+                })
+                .catch(error => {
+                    console.error('Error loading instruction details:', error);
+                    document.getElementById('instructionDetail').innerHTML = 
+                        '<div class="alert alert-danger">Error loading instruction details</div>';
+                });
+        }
+        
+        function createInstructionDetailHtml(instruction, actions) {
+            let statusBadge = '';
+            
+            switch(instruction.status) {
+                case 'PENDING':
+                    statusBadge = '<span class="badge bg-secondary">Pending</span>';
+                    break;
+                case 'IN_PROGRESS':
+                    statusBadge = '<span class="badge bg-primary">In Progress</span>';
+                    break;
+                case 'COMPLETED':
+                    statusBadge = '<span class="badge bg-success">Completed</span>';
+                    break;
+                case 'FAILED':
+                    statusBadge = '<span class="badge bg-danger">Failed</span>';
+                    break;
+            }
+            
+            let html = `
+                <div class="mb-4">
+                    <h4>${instruction.text} ${statusBadge}</h4>
+                    <p><strong>Created:</strong> ${new Date(instruction.createdAt).toLocaleString()}</p>
+                    <p><strong>Processed:</strong> ${instruction.processedAt ? new Date(instruction.processedAt).toLocaleString() : 'Not processed yet'}</p>
+                    ${instruction.result ? `<p><strong>Result:</strong> ${instruction.result}</p>` : ''}
+                </div>
+            `;
+            
+            if (instruction.status === 'PENDING') {
+                html += `
+                    <div class="mb-3">
+                        <button class="btn btn-primary" onclick="executeInstruction(${instruction.id})">Execute Now</button>
+                    </div>
+                `;
+            }
+            
+            if (actions && actions.length > 0) {
+                html += '<h5 class="top-spacing">Test Actions</h5>';
+                html += '<div class="table-responsive"><table class="table table-striped">';
+                html += '<thead><tr><th>Seq</th><th>Action</th><th>Element</th><th>Value</th><th>Status</th><th>Screenshot</th></tr></thead>';
+                html += '<tbody>';
+                
+                actions.forEach(action => {
+                    const rowClass = action.successful ? 'action-successful' : 'action-failed';
+                    const status = action.successful ? 
+                        '<span class="badge bg-success">Success</span>' : 
+                        `<span class="badge bg-danger">Failed</span> ${action.errorMessage ? `<small>${action.errorMessage}</small>` : ''}`;
+                    
+                    const screenshot = action.screenshot ? 
+                        `<img src="/screenshots/${action.screenshot}" class="screenshot-thumbnail" alt="Screenshot for action ${action.sequence}">` : 
+                        'N/A';
+                    
+                    html += `
+                        <tr class="${rowClass}">
+                            <td>${action.sequence}</td>
+                            <td>${action.actionType}</td>
+                            <td>${action.elementDescription || 'N/A'}</td>
+                            <td>${action.value || 'N/A'}</td>
+                            <td>${status}</td>
+                            <td>${screenshot}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table></div>';
+            } else {
+                html += '<div class="alert alert-info">No actions generated yet</div>';
+            }
+            
+            return html;
+        }
+        
+        function executeInstruction(id) {
+            fetch(`/api/test/instructions/${id}/execute`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadInstructions();
+                loadInstructionDetail(id);
+            })
+            .catch(error => {
+                console.error('Error executing instruction:', error);
+                alert('Error executing instruction');
+            });
+        }
+    </script>
+</body>
+</html> 

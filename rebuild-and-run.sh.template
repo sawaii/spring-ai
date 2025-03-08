@@ -1,0 +1,46 @@
+#!/bin/bash
+
+echo "========================================================"
+echo "Rebuilding and Running Spring AI Mobile Automation"
+echo "========================================================"
+
+# Clear any existing Google credentials
+unset GOOGLE_APPLICATION_CREDENTIALS
+
+# Set API key and other Vertex AI properties explicitly
+export SPRING_AI_VERTEX_AI_GEMINI_API_KEY="your-api-key-here"
+export VERTEX_AI_PROJECT_ID="your-project-id"
+export VERTEX_AI_LOCATION="us-central1"
+export SPRING_AI_VERTEX_AI_GEMINI_MODEL_NAME="gemini-1.5-pro"
+export SPRING_AI_VERTEX_AI_GEMINI_CHAT_MODEL="gemini-1.5-pro"
+
+# Show configuration
+echo "Project ID:    $VERTEX_AI_PROJECT_ID"
+echo "Location:      $VERTEX_AI_LOCATION"
+echo "Model:         $SPRING_AI_VERTEX_AI_GEMINI_MODEL_NAME"
+echo "Chat Model:    $SPRING_AI_VERTEX_AI_GEMINI_CHAT_MODEL"
+echo "API Key:       $(if [ -n "$SPRING_AI_VERTEX_AI_GEMINI_API_KEY" ]; then echo "PROVIDED"; else echo "MISSING"; fi)"
+echo "========================================================"
+
+# Check if Appium server is running
+APPIUM_PORT=4723
+echo "Checking if Appium server is running on port $APPIUM_PORT..."
+if nc -z localhost $APPIUM_PORT >/dev/null 2>&1; then
+    echo "Appium server is running on port $APPIUM_PORT."
+else
+    echo "WARNING: Appium server is not running on port $APPIUM_PORT."
+    echo "Please start the Appium server before testing with real devices."
+    echo "You can start it by running: ./start-appium.sh"
+fi
+
+# Clean and rebuild
+echo "Cleaning project..."
+mvn clean
+
+echo "Rebuilding project..."
+mvn package -DskipTests
+
+# Run with API key authentication and detailed logging
+echo "Starting application with API Key authentication..."
+mvn spring-boot:run \
+  -Dspring-boot.run.jvmArguments="-Dlogging.level.com.google.cloud=DEBUG -Dlogging.level.com.google.auth=DEBUG -Dlogging.level.com.springai.mobile.automation.config=TRACE -Dspring.main.allow-bean-definition-overriding=true" 

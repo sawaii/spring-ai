@@ -1,0 +1,49 @@
+# Exclude sensitive credential files
+*.json
+*.key
+*credentials*
+*token*
+oauth-*.json
+*-key.*
+*.pem
+
+# Sensitive configuration
+src/main/resources/application.properties
+src/main/resources/application-dev.properties
+src/main/resources/application-prod.properties
+**/application-*.properties
+!**/application.properties.template
+!**/application-example.properties
+
+# Script files with credentials
+run-web-prod.sh
+rebuild-and-run.sh
+isolate-auth-test.sh
+test-spring-ai-api-key.sh
+test-vertex-auth.sh
+!*.template
+!*-example.sh
+
+# Compiled class files
+*.class
+target/
+
+# Log files
+logs/
+*.log
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# H2 database files
+*.db
+data/
+
+# Token storage directory
+tokens/
+
+# OS specific files
+.DS_Store
+Thumbs.db 

@@ -1,0 +1,99 @@
+#!/bin/bash
+
+echo "======================================================"
+echo "Testing Spring AI with Vertex AI API Key Authentication"
+echo "======================================================"
+
+# Clear any existing Google credentials
+unset GOOGLE_APPLICATION_CREDENTIALS
+
+# Export Vertex AI configuration as environment variables
+export SPRING_AI_VERTEX_AI_GEMINI_API_KEY="your-api-key-here"
+export SPRING_AI_VERTEX_AI_GEMINI_PROJECT_ID="your-project-id"
+export SPRING_AI_VERTEX_AI_GEMINI_LOCATION="us-central1"
+export SPRING_AI_VERTEX_AI_GEMINI_CHAT_MODEL="gemini-1.5-pro"
+
+# Force disabling ADC
+export GOOGLE_CLOUD_AUTH_DISABLE_ADC="true"
+
+# Display configuration
+echo "Spring AI Configuration:"
+echo "Project ID:    $SPRING_AI_VERTEX_AI_GEMINI_PROJECT_ID"
+echo "Location:      $SPRING_AI_VERTEX_AI_GEMINI_LOCATION"
+echo "Chat Model:    $SPRING_AI_VERTEX_AI_GEMINI_CHAT_MODEL"
+echo "API Key:       $(if [ -n "$SPRING_AI_VERTEX_AI_GEMINI_API_KEY" ]; then echo "PROVIDED"; else echo "MISSING"; fi)"
+echo "ADC Disabled:  $GOOGLE_CLOUD_AUTH_DISABLE_ADC"
+echo "======================================================"
+
+# Create simple Spring Boot test application
+mkdir -p src/test/java/com/test
+cat > src/test/java/com/test/VertexAiApiKeyTest.java << 'EOL'
+package com.test;
+
+import org.springframework.ai.chat.ChatClient;
+import org.springframework.ai.chat.ChatResponse;
+import org.springframework.ai.chat.messages.UserMessage;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatClient;
+import org.springframework.ai.vertexai.gemini.VertexAiGeminiChatOptions;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+
+import java.util.List;
+
+@SpringBootApplication
+public class VertexAiApiKeyTest {
+
+    public static void main(String[] args) {
+        SpringApplication.run(VertexAiApiKeyTest.class, args);
+    }
+
+    @Bean
+    public CommandLineRunner testVertexAiChat(ChatClient chatClient, Environment env) {
+        return args -> {
+            System.out.println("========================================================");
+            System.out.println("Testing Spring AI with Vertex AI API Key Authentication");
+            System.out.println("========================================================");
+            System.out.println("Project ID: " + env.getProperty("spring.ai.vertex.ai.gemini.projectId"));
+            System.out.println("Location: " + env.getProperty("spring.ai.vertex.ai.gemini.location"));
+            System.out.println("API Key: " + 
+                (env.getProperty("spring.ai.vertex.ai.gemini.apiKey") != null ? "PROVIDED" : "MISSING"));
+            System.out.println("Model: " + env.getProperty("spring.ai.vertex.ai.gemini.chat.options.model"));
+            
+            System.out.println("\nSending test message to Vertex AI Gemini...");
+            ChatResponse response = chatClient.call(new UserMessage("Tell me a short joke about programming"));
+            
+            System.out.println("\nResponse from Vertex AI:");
+            System.out.println(response.getResult().getOutput().getContent());
+            
+            System.out.println("\nTest completed successfully!");
+            System.exit(0);
+        };
+    }
+}
+EOL
+
+# Create application.properties for the test
+mkdir -p src/test/resources
+cat > src/test/resources/application.properties << 'EOL'
+# Vertex AI Configuration - API Key Authentication
+spring.ai.vertex.ai.gemini.apiKey=${SPRING_AI_VERTEX_AI_GEMINI_API_KEY}
+spring.ai.vertex.ai.gemini.projectId=${SPRING_AI_VERTEX_AI_GEMINI_PROJECT_ID}
+spring.ai.vertex.ai.gemini.location=${SPRING_AI_VERTEX_AI_GEMINI_LOCATION}
+spring.ai.vertex.ai.gemini.chat.options.model=${SPRING_AI_VERTEX_AI_GEMINI_CHAT_MODEL}
+spring.ai.vertex.ai.gemini.credentialsUri=
+spring.ai.vertex.ai.gemini.transport=REST
+
+# Enable detailed logging
+logging.level.com.google.cloud=DEBUG
+logging.level.com.google.auth=DEBUG
+logging.level.org.springframework.ai=DEBUG
+logging.level.root=INFO
+EOL
+
+# Run the test
+echo "Running Spring AI Vertex API Key test..."
+mvn -Dtest=VertexAiApiKeyTest test 

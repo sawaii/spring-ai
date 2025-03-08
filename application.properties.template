@@ -1,0 +1,74 @@
+# =========================================================
+# Spring AI Configuration - API Key Authentication for Vertex AI
+# =========================================================
+
+# Allow bean definition overriding to resolve conflicting beans
+spring.main.allow-bean-definition-overriding=true
+
+# Disable auto-configuration for Vertex AI to avoid bean conflicts
+spring.ai.vertex.ai.gemini.enabled=false
+
+# Use REST transport to improve compatibility with API key and OAuth
+spring.ai.vertex.ai.gemini.transport=REST
+
+# Base configuration - REPLACE WITH YOUR OWN VALUES
+spring.ai.vertex.ai.gemini.projectId=${VERTEX_AI_PROJECT_ID:your-project-id}
+spring.ai.vertex.ai.gemini.location=${VERTEX_AI_LOCATION:us-central1}
+spring.ai.vertex.ai.gemini.modelName=${SPRING_AI_VERTEX_AI_GEMINI_MODEL_NAME:gemini-1.5-pro}
+spring.ai.vertex.ai.gemini.options.max-tokens=8192
+spring.ai.vertex.ai.gemini.options.temperature=0.7
+
+# API Key Authentication - REPLACE WITH YOUR OWN API KEY
+spring.ai.vertex.ai.gemini.apiKey=${SPRING_AI_VERTEX_AI_GEMINI_API_KEY:your-api-key-here}
+
+# Disable OAuth credentials to force using API Key
+spring.ai.vertex.ai.gemini.credentialsUri=
+
+# Force API key authentication and disable ADC
+google.cloud.auth.disable.adc=true
+spring.ai.vertex.ai.gemini.useApiKey=true
+
+# Chat-specific configuration
+spring.ai.vertex.ai.gemini.chat.options.model=${SPRING_AI_VERTEX_AI_GEMINI_CHAT_MODEL:gemini-1.5-pro}
+spring.ai.vertex.ai.gemini.chat.options.temperature=0.7
+spring.ai.vertex.ai.gemini.chat.options.maxTokens=8192
+
+# =========================================================
+# Database Configuration
+# =========================================================
+spring.datasource.url=jdbc:h2:file:./data/learningdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=password
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+# H2 Console Configuration
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+
+# =========================================================
+# Application Specific Configuration
+# =========================================================
+app.automation.screenshot.directory=./screenshots
+app.automation.learning.enabled=true
+app.automation.execution.timeout=30000
+
+# Appium Configuration (used only when actually connecting to devices)
+app.automation.appium.url=http://localhost:4355/wd/hub
+app.automation.device.name=Android Device
+app.automation.implicit.wait=10
+
+# =========================================================
+# Logging Configuration
+# =========================================================
+logging.level.root=INFO
+logging.level.com.springai.mobile.automation=DEBUG
+logging.level.org.springframework.ai=DEBUG
+# Enhanced logging for Google Cloud and Vertex AI components
+logging.level.com.google.cloud=DEBUG
+logging.level.com.google.cloud.vertexai=TRACE
+logging.level.com.google.api.gax=DEBUG
+logging.level.com.google.auth=DEBUG
+logging.file.name=./logs/spring-ai-mobile-automation.log 
